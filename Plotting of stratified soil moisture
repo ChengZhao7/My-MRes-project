@@ -2,7 +2,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 # 读取土壤湿度 NetCDF 数据
-file_path = '/storage/earth_data/home/ee23cz/MRes/New work/full soil moisture/full sm.nc'
+file_path = 'full sm.nc'
 dataset = xr.open_dataset(file_path)
 
 # 提取 8月、9月、10月、11月的数据 (干旱季节)
