@@ -1,0 +1,71 @@
+import xarray as xr
+import matplotlib.pyplot as plt
+
+# 读取土壤湿度 NetCDF 数据
+file_path = '/storage/earth_data/home/ee23cz/MRes/New work/full soil moisture/full sm.nc'
+dataset = xr.open_dataset(file_path)
+
+# 提取 8月、9月、10月、11月的数据 (干旱季节)
+dry_season_months = dataset['time'].dt.month.isin([8, 9, 10, 11])
+
+# 获取 2000-2024 年的所有年份的干旱季节数据并计算平均值作为基准
+baseline_period = dataset.sel(time=slice('2000-01-01', '2024-12-31'))
+baseline_dry_season = baseline_period.where(dry_season_months, drop=True)
+mean_baseline = baseline_dry_season.mean(dim='time')  # 计算2000-2024年间所有年份干旱季节的平均值
+
+# 定义感兴趣的年份
+years_of_interest = [2015, 2019, 2023]
+
+# 定义绘图函数，并保存图像
+def plot_multiple_years_difference_map(years, difference_data_list, depth_label, file_name):
+    fig, axes = plt.subplots(1, len(years), figsize=(15, 5), dpi=600)
+
+    for i, year in enumerate(years):
+        difference_data = difference_data_list[i]
+        ax = axes[i]
+
+        # 在最后一个子图中添加颜色条
+        if i == len(years) - 1:
+            difference_data.plot(ax=ax, cmap='RdBu', cbar_kwargs={'label': 'Soil Moisture Difference (%)'})
+        else:
+            difference_data.plot(ax=ax, cmap='RdBu', add_colorbar=False)
+
+        ax.set_title(f'{year} vs 2000-2024 ({depth_label})')
+
+    plt.tight_layout()
+    
+    # 保存图像
+    plt.savefig(file_name, dpi=600)
+    plt.show()
+
+# 计算每一年的差值
+def calculate_difference(year, soil_moisture_layer):
+    # 提取特定年份的8、9、10、11月份数据
+    year_data = dataset.sel(time=str(year)).where(dry_season_months, drop=True)
+    mean_year_data = year_data.mean(dim='time')
+
+    # 计算该年份与基准的差值
+    difference = mean_year_data - mean_baseline
+    difference_layer = difference[soil_moisture_layer]
+
+    return difference_layer
+
+# 绘制并保存 0-10 cm 深度的差异图
+soil_moisture_layer_0_10 = 'SoilMoi0_10cm_inst'
+difference_data_list_0_10 = [calculate_difference(year, soil_moisture_layer_0_10) for year in years_of_interest]
+plot_multiple_years_difference_map(years_of_interest, difference_data_list_0_10, '0-10 cm', 'difference_0_10cm.png')
+
+# 绘制并保存 10-40 cm 深度的差异图
+soil_moisture_layer_10_40 = 'SoilMoi10_40cm_inst'
+difference_data_list_10_40 = [calculate_difference(year, soil_moisture_layer_10_40) for year in years_of_interest]
+plot_multiple_years_difference_map(years_of_interest, difference_data_list_10_40, '10-40 cm', 'difference_10_40cm.png')
+
+# 绘制并保存 40-100 cm 深度的差异图
+soil_moisture_layer_40_100 = 'SoilMoi40_100cm_inst'
+difference_data_list_40_100 = [calculate_difference(year, soil_moisture_layer_40_100) for year in years_of_interest]
+plot_multiple_years_difference_map(years_of_interest, difference_data_list_40_100, '40-100 cm', 'difference_40_100cm.png')
+
+# 绘制并保存 100-200 cm 深度的差异图
+soil_moisture_layer_100_200 = 'SoilMoi100_200cm_inst'
+difference_data_list_100_200 = [calculate_difference(year, soil_moisture_layer_100_200) for year in years_of_interest]
+plot_multiple_years_difference_map(years_of_interest, difference_data_list_100_200, '100-200 cm', 'difference_100_200cm.png')
